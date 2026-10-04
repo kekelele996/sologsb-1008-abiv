@@ -1,6 +1,8 @@
 import { $, component$, useSignal, useVisibleTask$, type QRL } from "@builder.io/qwik";
 import { type DocumentHead } from "@builder.io/qwik-city";
 import { createSeedProject, STATUS_LABELS, uid } from "../data";
+import { OrdersPanel } from "../orders/OrdersPanel";
+import { migrateLegacyOrders } from "../orders/utils";
 import type { ReviewStatus, SignItem, SignProject } from "../types";
 import { analyzeSign, cloneTerms, diffText } from "../utils";
 
@@ -38,6 +40,7 @@ export default component$(() => {
   const toast = useSignal("");
   const previewId = useSignal("");
   const readOnly = useSignal(false);
+  const view = useSignal<"review" | "orders">("review");
   const active = () => project.value.signs.find((sign) => sign.id === (previewId.value || project.value.activeSignId)) ?? project.value.signs[0];
 
   const commit = $((label: string, update: (draft: SignProject) => void) => {
@@ -186,12 +189,24 @@ export default component$(() => {
     if (!hydrated.value) {
       try {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "") as { schema: number; project: SignProject };
-        if (stored.schema === 1 && stored.project?.signs?.length) project.value = stored.project;
+        if (stored.schema === 1 && stored.project?.signs?.length) {
+          const loaded = stored.project;
+          loaded.workOrders = loaded.workOrders?.length ? loaded.workOrders : [];
+          loaded.workOrders = migrateLegacyOrders(loaded.signs, loaded.workOrders);
+          project.value = loaded;
+        } else {
+          const seed = createSeedProject();
+          seed.workOrders = migrateLegacyOrders(seed.signs, seed.workOrders);
+          project.value = seed;
+        }
         const requestedPreview = new URLSearchParams(window.location.search).get("preview") ?? "";
         previewId.value = requestedPreview;
         readOnly.value = Boolean(requestedPreview);
       } catch {
         // Keep bundled sample data when storage is unavailable or malformed.
+        const seed = createSeedProject();
+        seed.workOrders = migrateLegacyOrders(seed.signs, seed.workOrders);
+        project.value = seed;
       }
       hydrated.value = true;
     }
@@ -281,6 +296,10 @@ export default component$(() => {
             <div class="text-xs uppercase tracking-[0.2em] text-sky-200">Public Sign Review</div>
             <div class="font-bold">公共标识多语言校对台</div>
           </div>
+          <div class="join ml-2">
+            <button class={`btn btn-sm join-item ${view.value === "review" ? "btn-primary" : "btn-outline"}`} onClick$={() => (view.value = "review")}>校对台</button>
+            <button class={`btn btn-sm join-item ${view.value === "orders" ? "btn-primary" : "btn-outline"}`} onClick$={() => (view.value = "orders")}>工单对账</button>
+          </div>
         </div>
         <div class="navbar-center hidden xl:flex">
           <input
@@ -308,7 +327,8 @@ export default component$(() => {
         </div>
       )}
 
-      <div class="grid min-h-[calc(100vh-64px)] grid-cols-[270px_minmax(560px,1fr)_430px] gap-px bg-slate-300">
+      {view.value === "review" ? (
+        <div class="grid min-h-[calc(100vh-64px)] grid-cols-[270px_minmax(560px,1fr)_430px] gap-px bg-slate-300">
         <aside class="overflow-y-auto bg-slate-50 p-3">
           <div class="mb-3 rounded-xl bg-white p-4 shadow-sm">
             <div class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">标识清单</div>
@@ -550,7 +570,10 @@ export default component$(() => {
             </div>
           </section>
         </aside>
-      </div>
+        </div>
+      ) : (
+        <OrdersPanel project={project} commit={commit} toast={toast} />
+      )}
 
       {toast.value && <div class="toast toast-end z-50"><div class="alert alert-success"><span>{toast.value}</span></div></div>}
     </div>

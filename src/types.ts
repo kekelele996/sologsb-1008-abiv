@@ -50,12 +50,35 @@ export interface SignItem {
   updatedAt: string;
 }
 
+export type WorkOrderStatus = "queued" | "posted" | "reprint" | "mismatch";
+export type WorkOrderSaveState = "idle" | "saving" | "failed" | "saved";
+
+export interface WorkOrder {
+  id: string;
+  signId: string;
+  code: string;
+  location: string;
+  widthMm: number;
+  heightMm: number;
+  fontSize: number;
+  translationVersionId: string | null;
+  legacy: boolean;
+  status: WorkOrderStatus;
+  capacityIssue: boolean;
+  saveState: WorkOrderSaveState;
+  saveAttempts: number;
+  postedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SignProject {
   id: string;
   title: string;
   location: string;
   activeSignId: string;
   signs: SignItem[];
+  workOrders: WorkOrder[];
   updatedAt: string;
 }
 

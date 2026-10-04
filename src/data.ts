@@ -1,4 +1,4 @@
-import type { ReviewStatus, SignItem, SignProject, TermBinding } from "./types";
+import type { ReviewStatus, SignItem, SignProject, TermBinding, WorkOrder } from "./types";
 
 export const uid = (prefix: string) =>
   `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -17,6 +17,44 @@ const term = (source: string, target: string, confirmed = false, required = true
   required,
   confirmed,
 });
+
+export const createSeedWorkOrders = (signs: SignItem[]): WorkOrder[] => {
+  const byCode = (code: string) => signs.find((sign) => sign.code === code);
+  const base = (
+    id: string,
+    code: string,
+    sign: SignItem | undefined,
+    location: string,
+    widthMm: number,
+    heightMm: number,
+    fontSize: number,
+    status: WorkOrder["status"],
+    postedAt: string | null,
+    createdAt: string,
+  ): WorkOrder => ({
+    id,
+    signId: sign?.id ?? "",
+    code,
+    location,
+    widthMm,
+    heightMm,
+    fontSize,
+    translationVersionId: null,
+    legacy: true,
+    status,
+    capacityIssue: false,
+    saveState: "saved",
+    saveAttempts: 1,
+    postedAt,
+    createdAt,
+    updatedAt: createdAt,
+  });
+  return [
+    base(uid("wo"), "WO-2026-0101", byCode("TR-01"), "站台候车区立柱", 600, 200, 48, "queued", null, "2026-09-20T02:00:00.000Z"),
+    base(uid("wo"), "WO-2026-0102", byCode("EM-02"), "商场疏散通道墙面", 800, 300, 56, "posted", "2026-09-19T08:30:00.000Z", "2026-09-19T08:00:00.000Z"),
+    base(uid("wo"), "WO-2026-0103", byCode("SV-03"), "公园服务亭台面", 400, 150, 32, "queued", null, "2026-09-22T06:00:00.000Z"),
+  ];
+};
 
 export const createSeedProject = (): SignProject => {
   const signs: SignItem[] = [
@@ -46,7 +84,17 @@ export const createSeedProject = (): SignProject => {
       status: "confirmed",
       terms: [term("紧急出口", "EMERGENCY EXIT", true), term("电梯", "elevator", true)],
       comments: [],
-      versions: [],
+      versions: [
+        {
+          id: "version-exit-seed",
+          label: "版本 1",
+          createdAt: "2026-09-18T06:10:00.000Z",
+          sourceText: "紧急出口。发生紧急情况时，请按指示方向迅速撤离，不要乘坐电梯。",
+          targetText: "EMERGENCY EXIT\nIn an emergency, leave quickly in the direction shown. Do not use the elevator.",
+          status: "confirmed",
+          terms: [term("紧急出口", "EMERGENCY EXIT", true), term("电梯", "elevator", true)],
+        },
+      ],
       emergencyRevision: false,
       updatedAt: "2026-09-18T06:10:00.000Z",
     },
@@ -88,6 +136,7 @@ export const createSeedProject = (): SignProject => {
     location: "滨海交通枢纽一期",
     activeSignId: signs[0].id,
     signs,
+    workOrders: createSeedWorkOrders(signs),
     updatedAt: new Date().toISOString(),
   };
 };
