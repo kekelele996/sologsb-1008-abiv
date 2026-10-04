@@ -68,3 +68,48 @@ export interface DiffToken {
   type: "same" | "add" | "remove";
   value: string;
 }
+
+export type WorkOrderStatus =
+  | "printing"
+  | "to_install"
+  | "installed"
+  | "reprint"
+  | "queued"
+  | "done";
+
+export interface RegisteredTranslation {
+  text: string;
+  versionId: string | null;
+  versionLabel: string;
+  capturedAt: string;
+  source: "current" | "snapshot" | "manual";
+}
+
+export interface WorkOrderAudit {
+  id: string;
+  at: string;
+  action: string;
+  detail: string;
+}
+
+export interface WorkOrder {
+  id: string;
+  code: string;
+  signId: string;
+  location: string;
+  plateWidth: number;
+  plateLines: number;
+  fontSize: number;
+  status: WorkOrderStatus;
+  translation: RegisteredTranslation | null;
+  pendingVerification: boolean;
+  audit: WorkOrderAudit[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkOrderStore {
+  schema: 2;
+  orders: WorkOrder[];
+  updatedAt: string;
+}
